@@ -12,6 +12,6 @@ take anywhere from seconds to minutes to hours. The general rule is 2-3 seconds 
 
 <br/>
 
--Add description parser to read alt text.
--Add excel outputting so that output document is formatted nicely.
--Finally, make a more complete program. Perhaps a web application.
+1.Add description parser to read alt text.
+2.Add excel outputting so that output document is formatted nicely.
+4.Finally, make a more complete program. Perhaps a web application.
