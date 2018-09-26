@@ -6,9 +6,9 @@ import requests
 from requests.exceptions import HTTPError
 import random
 from time import sleep
+from tkinter import *
+import re
 
-MATCH_CRITERIA = "&action=advanced&text=+![{B}]+![{W}]+![{R}]+![{G}]+[enters]+[the]+[battlefield]&format=+[\"Commander\"]&color=+@(+[C])&type=+[\"Artifact\"]+![\"Creature\"]"
-NUMBER_OF_PAGES = 2
 
 def make_soup(url):
 
@@ -96,7 +96,7 @@ def getURLFromSet(name, soupElement):
                 if(priceFloat < paperPrice):
                     paperPrice = priceFloat
 
-    sleep(random.uniform(2.8, 6.7))
+    sleep(random.uniform(1.5, 3))
 
     for set in soupElement.findAll("img"):
         setString = set.get('title')
@@ -121,47 +121,98 @@ def getURLFromSet(name, soupElement):
 
 
 
-urlTable = []
-
-def buildURLTable(nextURL, numOfPages):
-    baseurl = "http://gatherer.wizards.com/Pages/Search/Default.aspx?page="
-
-    for x in range(0, numOfPages):
-        fullstring = baseurl + str(x) + nextURL
-        urlTable.append(fullstring)
-
 #HERE WE START
 
-buildURLTable(MATCH_CRITERIA, NUMBER_OF_PAGES)
+urlTable = []
 
-stringofcards = "Card Name, Colors, CMC, Description, Price, URL"
-count = 0
-for url in urlTable:
-    soup = make_soup(url)
-    for record in soup.findAll("tr", {"class": "cardItem"}):
+def runGeneration():
+    stringofcards = "Card Name, Colors, CMC, Description, Price, URL"
+    count = 0
+    for url in urlTable:
+        soup = make_soup(url)
+        for cardRow in soup.findAll("tr", {"class": "cardItem"}):
 
-        cardTitle = record.findAll("span", {"class": "cardTitle"})
+            cardTitle = cardRow.findAll("span", {"class": "cardTitle"})
 
-        colorElement = record.findAll("span", {"class": "manaCost"})
-        color = getColors(colorElement[0])
+            colorElement = cardRow.findAll("span", {"class": "manaCost"})
+            color = getColors(colorElement[0])
 
-        cardInfo = record.findAll("div", {"class": "cardInfo"})
-        cmc = getCMC(cardInfo[0])
+            cardInfo = cardRow.findAll("div", {"class": "cardInfo"})
+            cmc = getCMC(cardInfo[0])
 
-        description = record.findAll("div", {"class": "rulesText"})
-        descriptionText = getDescription(description[0])
+            description = cardRow.findAll("div", {"class": "rulesText"})
+            descriptionText = getDescription(description[0])
 
-        set = record.findAll("td", {"class": "rightCol setVersions"})
-        mtgurl, paperPrice = getURLFromSet(cardTitle[0].text, set[0])
+            set = cardRow.findAll("td", {"class": "rightCol setVersions"})
+            mtgurl, paperPrice = getURLFromSet(cardTitle[0].text, set[0])
 
-        cardTitleString = cardTitle[0].text.replace(",", "")
-        descriptionTextString = descriptionText.replace(",", "")
-        stringofcards = stringofcards + cardTitleString + ", " + color + ", " + cmc + ", " + descriptionTextString + ", " + str(paperPrice) + ", " + mtgurl
-        print(count)
-        count = count + 1
+            cardTitleString = cardTitle[0].text.replace(",", "")
+            descriptionTextString = descriptionText.replace(",", "")
+            stringofcards = stringofcards + cardTitleString + ", " + color + ", " + cmc + ", " + descriptionTextString + ", " + str(paperPrice) + ", " + mtgurl
+            print(count)
+            count = count + 1
 
-f = open('cards.csv', 'w')
-f.write(stringofcards)
-f.close()
+    f = open('cardlist.csv', 'w')
+    f.write(stringofcards)
+    f.close()
+
+def getPageCount(url, soup):
+    searchTextElement = soup.findAll("span", {"id": "ctl00_ctl00_ctl00_MainContent_SubContent_SubContentHeader_searchTermDisplay"})
+    searchText = searchTextElement[0].text
+    p = re.compile('(?<=\()([0-9]+)(?=\))')
+    integer = int(p.search(searchText).group(1))
+    pagecount = 0;
+    pagecount = int(integer/100 + 1)
+    return pagecount
+
+def buildURLTable(url, app):
+
+    app.destroy()
+    baseurl = 'http://gatherer.wizards.com/Pages/Search/Default.aspx?'
+
+    if baseurl in url:
+
+        pagesoup = make_soup(url)
+        pagecount = getPageCount(url, pagesoup)
+
+        appender = re.compile('(?<=action=advanced).*')
+        toAppend = appender.search(url).group(0)
+
+        for i in range(pagecount):
+            urlTable.append(baseurl + 'page='+ str(i) +'&action=advanced' + toAppend)
+
+        runGeneration()
+
+
+from tkinter import *
+from tkinter import filedialog
+
+WINDOW_TITLE = "Goldfish Gatherer"
+
+class Application():
+    def __init__(self):
+        #widget declarations and inits__________________________________________________________________________________
+        #INITIAL IMPORT/EXPORT
+        self.app = Tk()
+        self.app.focus_set()
+        self.app.title(WINDOW_TITLE)
+        self.app.resizable(width=False, height=False)
+        self.importPathL = Label(self.app, text="Enter Gatherer search URL:")
+        self.importPathE = Entry(self.app, width=40)
+        self.importB = Button(self.app, text="Get Priced List", command=lambda : buildURLTable(self.importPathE.get(), self.app))
+
+        #widget grid placement__________________________________________________________________________________________
+        #INITIAL IMPORT/EXPORT
+        self.importPathL.grid( rowspan=1, padx=(10, 0), pady=(20,0))
+        self.importPathE.grid(row=1, rowspan=1, padx=(20, 20), pady=5)
+        self.importB.grid(row=2,column=0, padx=(40, 40), pady=20)
+
+    def start(self):
+        self.app.mainloop()
+
+app = Application()
+app.start()
+
+
 
 
