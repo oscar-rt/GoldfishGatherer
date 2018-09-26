@@ -130,7 +130,7 @@ def buildURLTable(nextURL, numOfPages):
         fullstring = baseurl + str(x) + nextURL
         urlTable.append(fullstring)
 
-#HERE
+#HERE WE START
 
 buildURLTable(MATCH_CRITERIA, NUMBER_OF_PAGES)
 
